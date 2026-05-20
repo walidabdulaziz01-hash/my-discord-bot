@@ -1,5 +1,12 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 const { joinVoiceChannel, VoiceConnectionStatus } = require('@discordjs/voice');
+const http = require('http');
+
+// كود بسيط لفتح بورت ليرضى موقع Render
+http.createServer((req, res) => {
+  res.write('Bot is alive');
+  res.end();
+}).listen(process.env.PORT || 3000);
 
 const client = new Client({
     intents: [
@@ -8,8 +15,8 @@ const client = new Client({
     ]
 });
 
-// تأكد من أرقام الـ IDs الخاصة بك هنا
-const GUILD_ID = '1488155566499958784'; 
+// ضع الأرقام الخاصة بك هنا
+const GUILD_ID = '1488155566499958784';
 const CHANNEL_ID = '1500725529777799239';
 
 client.once('ready', () => {
@@ -26,19 +33,19 @@ function joinChannel() {
 
     const connection = joinVoiceChannel({
         channelId: channel.id,
-        guildId: guild.id, // تم التصحيح هنا ليكون رقم السيرفر
+        guildId: guild.id,
         adapterCreator: guild.voiceAdapterCreator,
     });
 
     connection.on(VoiceConnectionStatus.Disconnected, async () => {
         try {
             connection.destroy();
-            joinChannel(); 
+            joinChannel();
         } catch (error) {
             joinChannel();
         }
     });
 }
 
-// ضع التوكن الخاص بك هنا بين علامتي التنصيص
+// الاتصال بالبوت باستخدام التوكن من إعدادات Render
 client.login(process.env.TOKEN);
