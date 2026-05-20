@@ -1,8 +1,7 @@
 const { Client, GatewayIntentBits } = require('discord.js');
-const { joinVoiceChannel, VoiceConnectionStatus } = require('@discordjs/voice');
+const { joinVoiceChannel, VoiceConnectionStatus, entersState, VoiceConnectionDisconnectReason } = require('@discordjs/voice');
 const http = require('http');
 
-// كود بسيط لفتح بورت ليرضى موقع Render
 http.createServer((req, res) => {
   res.write('Bot is alive');
   res.end();
@@ -15,16 +14,15 @@ const client = new Client({
     ]
 });
 
-// ضع الأرقام الخاصة بك هنا
 const GUILD_ID = '1488155566499958784';
 const CHANNEL_ID = '1500725529777799239';
 
 client.once('ready', () => {
     console.log(`تم تشغيل البوت: ${client.user.tag}`);
-    joinChannel();
+    connectToChannel();
 });
 
-function joinChannel() {
+async function connectToChannel() {
     const guild = client.guilds.cache.get(GUILD_ID);
     if (!guild) return console.log("خطأ: لم يتم العثور على السيرفر");
 
@@ -37,15 +35,17 @@ function joinChannel() {
         adapterCreator: guild.voiceAdapterCreator,
     });
 
-    connection.on(VoiceConnectionStatus.Disconnected, async () => {
+    connection.on(VoiceConnectionStatus.Disconnected, async (oldState, newState) => {
         try {
-            connection.destroy();
-            joinChannel();
+            await Promise.race([
+                entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+                entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+            ]);
         } catch (error) {
-            joinChannel();
+            connection.destroy();
+            connectToChannel(); // إعادة محاولة الاتصال
         }
     });
 }
 
-// الاتصال بالبوت باستخدام التوكن من إعدادات Render
 client.login(process.env.TOKEN);
