@@ -41,4 +41,4 @@ function joinChannel() {
 }
 
 // ضع التوكن الخاص بك هنا بين علامتي التنصيص
-client.login('process.env.token');
+client.login(process.env.TOKEN);
