@@ -1,63 +1,44 @@
 const { Client, GatewayIntentBits } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, VoiceConnectionStatus, entersState } = require('@discordjs/voice');
-const http = require('http');
-
-// إنشاء سيرفر وهمي للاستضافة عشان ما يقفل البوت
-http.createServer((req, res) => {
-    res.write("I am alive");
-    res.end();
-}).listen(process.env.PORT || 3000);
+const { joinVoiceChannel, VoiceConnectionStatus } = require('@discordjs/voice');
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
     ]
 });
 
-const GUILD_ID = '1488155566499958784';
+// تأكد من أرقام الـ IDs الخاصة بك هنا
+const GUILD_ID = '1488155566499958784'; 
 const CHANNEL_ID = '1500725529777799239';
-const BOT_TOKEN = process.env.BOT_TOKEN; // سحبنا التوكن هنا للأمان منعاً لسرقته
 
 client.once('ready', () => {
-    console.log(`تم تشغيل البوت بنجاح: ${client.user.tag}`);
-
-    const guild = client.guilds.cache.get(GUILD_ID);
-    if (!guild) return console.log("خطأ: لم يتم العثور على السيرفر.");
-
-    const channel = guild.channels.cache.get(CHANNEL_ID);
-    if (!channel) return console.log("خطأ: لم يتم العثور على الروم الصوتي.");
-
-    connectToVoice(channel);
+    console.log(`تم تشغيل البوت: ${client.user.tag}`);
+    joinChannel();
 });
 
-function connectToVoice(channel) {
+function joinChannel() {
+    const guild = client.guilds.cache.get(GUILD_ID);
+    if (!guild) return console.log("خطأ: لم يتم العثور على السيرفر");
+
+    const channel = guild.channels.cache.get(CHANNEL_ID);
+    if (!channel) return console.log("خطأ: لم يتم العثور على الروم الصوتي");
+
     const connection = joinVoiceChannel({
         channelId: channel.id,
-        guildId: channel.guild.id,
-        adapterCreator: channel.guild.voiceAdapterCreator,
-        selfDeaf: true, 
-        selfMute: false
+        guildId: guild.id, // تم التصحيح هنا ليكون رقم السيرفر
+        adapterCreator: guild.voiceAdapterCreator,
     });
 
-    const player = createAudioPlayer();
-    connection.subscribe(player);
-
-    console.log(`البوت متصل الآن في روم: ${channel.name}`);
-
-    connection.on('disconnected', async () => {
-        console.log("تم فصل البوت، جارٍ إعادة الاتصال...");
+    connection.on(VoiceConnectionStatus.Disconnected, async () => {
         try {
-            await Promise.race([
-                entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
-                entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
-            ]);
+            connection.destroy();
+            joinChannel(); 
         } catch (error) {
-            setTimeout(() => connectToVoice(channel), 5000);
+            joinChannel();
         }
     });
 }
 
-client.login(BOT_TOKEN);
+// ضع التوكن الخاص بك هنا بين علامتي التنصيص
+client.login('process.env.token');
